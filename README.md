@@ -11,6 +11,8 @@
     - [Calling a Block with the Call Method](#calling-a-block-with-the-call-method)
     - [Demo: Using the Yield Keyword](#demo-using-the-yield-keyword)
     - [Using Blocks with Built-in Types](#using-blocks-with-built-in-types)
+    - [Demo: Implementing a Coin Flip](#demo-implementing-a-coin-flip)
+  - [Using Procs and Lambdas](#using-procs-and-lambdas)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -241,4 +243,130 @@ R u b y %
 
 `each_char` is a method on String that can be called with a block. `each_char` supports iterating over each letter in the string on which it's called.
 
-Left at 1:06
+Another example:
+
+```ruby
+i = 0
+lang = "Ruby
+Java
+Pyton
+C
+"
+
+lang.each_line { |line| print "#{i += 1} #{line}" }
+```
+
+Output:
+
+```
+1 Ruby
+2 Java
+3 Pyton
+4 C
+```
+
+`lang` is a multi-line string.
+
+Uses `each_line` method of String built-in type, that accepts a block, iterates over each line of a multi-line string.
+
+**Using Blocks with Integers**
+
+Example to print every integer from 2 through 6. Use [upto](https://rubyapi.org/3.1/o/integer#method-i-upto) method of built-in Integer type, which accepts a block. Call `upto` on Integer `2`, with argument  `6` and a block that prints out the number followed by a space.
+
+```ruby
+2.upto(6) { |num| print num, " " }
+# 2 3 4 5 6 %
+```
+
+**Using Blocks with Arrays**
+
+Using [delete_if](https://rubyapi.org/3.1/o/array#method-i-delete_if) method of Array built-in type.
+
+```ruby
+arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+print(arr.delete_if { |num| num > 7 })
+# [1, 2, 3, 4, 5, 6, 7]
+```
+
+Note that `delete_if` modifies the array on which its called. Will remove elements that satisfy the given condition.
+
+Use `reject` instead of `delete_if` to return a new array instead of modifying existing array:
+
+```ruby
+arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+print(arr.reject { |num| num > 7 })
+print "\n", arr
+# [1, 2, 3, 4, 5, 6, 7]
+# [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]%
+```
+
+Use `count` method to find number of elements in the array for which the condition in the block returns true:
+
+```ruby
+arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+print(arr.count { |c| c == 9 })
+# 1
+```
+
+**Using Block with Hashes**
+
+`each` method can be used on a hash as well as array. It yields a key and value for each entry in the hash.
+
+Can also iterate over only the keys with `each_key` method and just the values with `each_value`.
+
+```ruby
+hash = { name: "John", age: 18 }
+hash.each do |key, value|
+  puts "key: #{key}, value: #{value}"
+end
+# key: name, value: John
+# key: age, value: 18
+
+hash.each_key { |key| puts "key: #{key}" }
+# key: name
+# key: age
+
+hash.each_value { |value| puts "value: #{value}" }
+# value: John
+# value: 18
+```
+
+### Demo: Implementing a Coin Flip
+
+Putting together everything learned in this module.
+
+[coin.rb](exercises/blocks/coin.rb)
+
+Output:
+
+```
+==========
+Printing stats
+- Heads: 0
+- Tails: 0
+==========
+Dime coin toss resulted in heads
+Dime coin toss resulted in tails
+Dime coin toss resulted in tails
+Dime coin toss resulted in tails
+==========
+Printing stats
+- Heads: 1
+- Tails: 3
+==========
+==========
+Printing stats
+- Heads: 1
+- Tails: 3
+==========
+**********
+Printing stats when passing block
+Dime
+{:heads=>1, :tails=>3}
+**********
+```
+
+## Using Procs and Lambdas
+
