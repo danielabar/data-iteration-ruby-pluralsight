@@ -13,6 +13,8 @@
     - [Using Blocks with Built-in Types](#using-blocks-with-built-in-types)
     - [Demo: Implementing a Coin Flip](#demo-implementing-a-coin-flip)
   - [Using Procs and Lambdas](#using-procs-and-lambdas)
+    - [Working with Procs](#working-with-procs)
+    - [Working with Lambdas](#working-with-lambdas)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -370,3 +372,191 @@ Dime
 
 ## Using Procs and Lambdas
 
+### Working with Procs
+
+Proc: short for procedure, i.e. set of instructions packaged together to perform some task.
+
+Ruby proc: Object that serves as a saved block.
+
+Use a proc instead of a block if the same block is being used in multiple places. A Proc could replace this.
+
+A proc is bound to a set of local variables.
+
+**Diff**
+
+Block is part of the syntax of a method call, whereas a Proc is an object, an instance of the Proc class.
+
+Can call methods on a proc object, assign it to a variable.
+
+Can only pass a single Block in a method arguments list. Whereas with a Proc, can pass multiple Proc objects to a method as arguments.
+
+There's no way to call a block independently, it's only executed as part of the method. Whereas all Proc objects have a `call` method that can be invoked to execute it.
+
+**Example**
+
+Start with using blocks to find squares of two arrays. Notice use of the same block for squaring evens array and odds array. Because there's no way to persist blocks, they can't be re-used:
+
+```ruby
+# Input
+evens = [2, 4, 6, 8]
+odds = [1, 3, 5, 7]
+
+square_of_evens = evens.map { |num| num**2 }
+square_of_odds = odds.map { |num| num**2 }
+
+p square_of_evens
+p square_of_odds
+```
+
+Output:
+
+```ruby
+[4, 16, 36, 64]
+[1, 9, 25, 49]
+```
+
+Procs can help to reduce code duplication. Implement again with a proc. Notice the proc can be assigned to a variable and passed as an argument to methods.
+
+```ruby
+# Input
+evens = [2, 4, 6, 8]
+odds = [1, 3, 5, 7]
+
+# create a proc object, assign it to variable `squares`
+squares = proc { |x| x**2 }
+
+# prefix argument with ampersand `&` to tell Ruby this is a proc, not an ordinary variable
+even_squares = evens.map(&squares)
+odd_squares = odds.map(&squares)
+
+p even_squares
+p odd_squares
+```
+
+Same output as with blocks.
+
+Procs can also be used to filter values:
+
+```ruby
+# Use Range to declare an array of integers from 1 to 5
+nums = (1..5).to_a
+
+# Define filters as procs
+is_even = proc { |num| num.even? }
+is_odd = proc { |num| num.odd? }
+
+# Apply the filters to the array by passing the procs to the `select` method
+# and display the output
+p nums.select(&is_even)
+p nums.select(&is_odd)
+```
+
+Outputs:
+
+```ruby
+[2, 4]
+[1, 3, 5]
+```
+
+Procs can be defined using curly braces if single line, or `do ... end` keywords for multiline.
+
+Procs provide all benefits of blocks, plus can be persisted in a variable.
+
+Example below shows how proc can be passed to a method that doesn't accept any parameters:
+
+```ruby
+# Declare a method that doesn't accept any parameters
+def my_method
+  puts "Inside my method"
+  # transfers execution to proc
+  yield
+end
+
+# Declare a proc and assign to `my_proc` variable
+my_proc = proc { puts "Inside the proc" }
+
+# Invoke `my_method` with `my_proc`
+my_method(&my_proc)
+```
+
+Outputs:
+
+```
+Inside my method
+Inside the proc
+```
+
+This example shows how the `call` method of a proc can be invoked:
+
+```ruby
+greet = proc { puts "Hello world!" }
+greet.call
+# Hello world!
+```
+
+Example calculating squares of evens and odds array all in one line with Array `map` method:
+
+```ruby
+evens = (2..8).step(2).to_a
+odds = (1..7).step(2).to_a
+
+squares = proc { |num| num**2 }
+
+# declare a nested array with each entry itself an array
+s_evens, s_odds = [evens, odds].map { |array| array.map(&squares) }
+p s_evens
+p s_odds
+```
+
+Outputs:
+
+```
+[4, 16, 36, 64]
+[1, 9, 25, 49]
+```
+
+Suppose we also want to calculate cubes - here is the first attempt using procs:
+
+```ruby
+evens = (2..8).step(2).to_a
+odds = (1..7).step(2).to_a
+
+squares = proc { |num| num**2 }
+cubes = proc { |num| num**3 }
+
+s_evens, s_odds = [evens, odds].map { |array| array.map(&squares) }
+c_evens, c_odds = [evens, odds].map { |array| array.map(&cubes) }
+
+p s_evens
+p s_odds
+p c_evens
+p c_odds
+```
+
+Outputs:
+
+```
+[4, 16, 36, 64]
+[1, 9, 25, 49]
+[8, 64, 216, 512]
+[1, 27, 125, 343]
+```
+
+Not part of course, but could also declare a proc that accepts additional arguments, for example a more generic `power` proc that accepts a number and exponent:
+
+```ruby
+evens = (2..8).step(2).to_a
+odds = (1..7).step(2).to_a
+
+power = proc { |num, exponent| num**exponent }
+
+s_evens, s_odds = [evens, odds].map { |array| array.map { |num| power.call(num, 2) } }
+c_evens, c_odds = [evens, odds].map { |array| array.map { |num| power.call(num, 3) } }
+
+p s_evens
+p s_odds
+p c_evens
+p c_odds
+```
+
+### Working with Lambdas
