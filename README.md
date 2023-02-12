@@ -15,6 +15,7 @@
   - [Using Procs and Lambdas](#using-procs-and-lambdas)
     - [Working with Procs](#working-with-procs)
     - [Working with Lambdas](#working-with-lambdas)
+    - [Demo: Unit Conversion with Lambda](#demo-unit-conversion-with-lambda)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -560,3 +561,122 @@ p c_odds
 ```
 
 ### Working with Lambdas
+
+Similar to Proc but different in how arguments and `return` keyword are treated.
+
+Lambda validates number of arguments passed to it, throws arg error and halts execution if incorrect.
+
+Proc ignores missing or additional arguments passed to it and continues execution. Proc replaces missing argument with nil value, depending on the type. Eg: String will be replaced with blank character if no value passed.
+
+When lambda encounters `return`, behaves similarly to nested method, it returns execution to calling method.
+
+When `return` statement in proc, it returns control outside the calling method - causes execution to skip over all other statements in enclosing method.
+
+Prefer lambdas over procs if need strict control over the arguments.
+
+Note that they are both objects of the same class `Proc`:
+
+```ruby
+proc = proc { puts "This is a Proc" }
+
+# Rubocop: S tyle/Lambda
+# my_lambda = lambda { puts "This is a Lambda" }
+my_lambda = -> { puts "This is a Lambda" }
+
+p proc.class
+# Proc
+
+p my_lambda.class
+# Proc
+```
+
+See how they're different wrt argument handling - with proc that declares a single arg, can call it with a single param, multiple params or no params and it still works. But this is not the case with lambda, which will expect exactly a single param passed it, otherwise raises `ArgumentError`:
+
+```ruby
+# A proc that accepts a single argument
+my_proc = proc { |name| puts "Name is #{name}" }
+
+# Call a proc with expected number of args
+my_proc.call("John")
+# Name is John
+
+# Call a proc with too many args
+my_proc.call("John", "Doe")
+# Name is John
+
+# Call a proc with no args - replaces `name` with blank character
+my_proc.call
+# Name is
+
+# A lambda that accepts a single arguemnt
+my_lambda = ->(name) { puts "Name is #{name}" }
+
+# Call a lambda with expected number of args
+my_lambda.call("John")
+# Name is John
+
+# Call a lambda with too many args
+my_lambda.call("John", "Doe")
+# arg_handling.rb:14:in `block in <main>': wrong number of arguments (given 2, expected 1) (ArgumentError)
+
+# Call a lambda with no args
+my_lambda.call
+# arg_handling.rb:17:in `block in <main>': wrong number of arguments (given 0, expected 1) (ArgumentError)
+```
+
+Looking at return handling - when the lambda is called, execution is transferred to the block defined for the lambda. This causes execution to jump out of the block, and return control to the next line in the `my_method` method. And this is why the last line `puts ...` is executed:
+
+```ruby
+def my_method
+  # Create a lambda that simply returns whenever it's called
+  my_lambda = -> { return }
+  # Call the lambda
+  my_lambda.call
+  # One more statement - will this run?
+  puts "End of method"
+end
+
+my_method
+# Outputs: End of method
+```
+
+Note that lambda behaves similar to nested method wrt `return` handling, however, Rubocop warns to prefer lambda over nested method:
+
+```ruby
+def outer_method
+  # rubocop:disable Lint/NestedMethodDefinition
+  def inner_method
+    # rubocop:disable Style/RedundantReturn
+    return
+    # rubocop:enable Style/RedundantReturn
+  end
+  # rubocop:enable Lint/NestedMethodDefinition
+
+  # Call the inner method
+  inner_method
+
+  # One more line - does this run? YES!
+  puts "This is the outer method"
+end
+
+outer_method
+# Output:
+# This is the outer method
+```
+
+Compare to how proc does return handling - in this case, when `return` is encountered in proc body, execution jumps *outside* of `my_method` to the program that called it, since there's no further code in this example, the program ends. So it never gets to the `puts...` line *inside* of `my_method`:
+
+```ruby
+def my_method
+  my_proc = proc { return "Exiting my_proc" }
+  my_proc.call
+  puts "End of method"
+end
+
+p my_method
+# Output: Exiting my_proc
+```
+
+Lesson learned: Careful when using `return` statement inside of a `Proc`, as the behaviour is different as compared to a `lambda`.
+
+### Demo: Unit Conversion with Lambda
