@@ -16,6 +16,9 @@
     - [Working with Procs](#working-with-procs)
     - [Working with Lambdas](#working-with-lambdas)
     - [Demo: Unit Conversion with Lambda](#demo-unit-conversion-with-lambda)
+  - [Adding Functionality with Mixins](#adding-functionality-with-mixins)
+    - [Modules and Mixins](#modules-and-mixins)
+    - [The Include Statement](#the-include-statement)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -680,3 +683,132 @@ p my_method
 Lesson learned: Careful when using `return` statement inside of a `Proc`, as the behaviour is different as compared to a `lambda`.
 
 ### Demo: Unit Conversion with Lambda
+
+Consider the following code that converts meters to various imperial units - there's lots of code duplication such as checking if input is numeric:
+
+```ruby
+def convert_to_inches(meters)
+  meters * 39.37 if meters.is_a?(Numeric)
+end
+
+def convert_to_feet(meters)
+  meters * 3.28 if meters.is_a?(Numeric)
+end
+
+def convert_to_yards(meters)
+  meters * 1.09 if meters.is_a?(Numeric)
+end
+
+p convert_to_inches(5)
+p convert_to_feet(5)
+p convert_to_yards(5)
+
+# Output
+# 196.85
+# 16.4
+# 5.45
+```
+
+Here's an improvement using a block to eliminate the duplication of numeric checking:
+
+```ruby
+def numeric_check(meters)
+  yield(meters) if meters.is_a?(Numeric)
+end
+
+# inches
+p numeric_check(5) { |meters| meters * 39.37 }
+
+# feet
+p numeric_check(5) { |meters| meters * 3.28 }
+
+# yards
+p numeric_check(5) { |meters| meters * 1.09 }
+
+# invalid
+p numeric_check("foo") { |meters| meters * 12.34 }
+```
+
+Improvement using lambdas to name the conversions as per the units they handle:
+
+```ruby
+to_inches = ->(meters) { meters * 39.37 }
+to_feet = ->(meters) { meters * 3.28 }
+to_yards = ->(meters) { meters * 1.09 }
+
+def convert(meters, unit_lambda)
+  unit_lambda.call(meters) if meters.is_a?(Numeric)
+end
+
+p convert(5, to_inches)
+p convert(5, to_feet)
+p convert(5, to_yards)
+
+# multiple conversions, ampersand indicates this is a proc/lambda so `call` will be invoked
+p [10, 25, 30].map(&to_inches)
+```
+
+## Adding Functionality with Mixins
+
+### Modules and Mixins
+
+**Module**
+
+* Grouping of objects under a single name
+* Can be shared across classes
+* Can consist of constants, methods, classes, and other modules
+* Cannot be instantiated
+* Do not have a `new` method
+* Container of objects or namespace (eg: `Math.PI` - `Math` module exposes constants such as `PI`)
+* Namespace is roughly like package in Java - avoid naming conflicts across classes
+* Modules can be included in classes (aka mixin) to add behaviour, eg: `Enumerable`
+* Module is the superclass of `Class`, therefore every class is also a module.
+
+```ruby
+p Class.superclass
+# Module
+
+p Enumerable.class
+# Modules
+```
+
+Let's re-write the unit conversion code as a module - use `module` keyword followed by name of module.
+
+```ruby
+module MeterConversion
+  # no special keyword in Ruby to declare a constant,
+  # as long as first character is uppercase, it's a constant.
+  VERSION = 1.0
+
+  # Using `self` keyword tells Ruby we want to call this method
+  # on the MeterConversion module.
+  def self.to_inches(meters)
+    meters * 39.37
+  end
+
+  def self.to_feet(meters)
+    meters * 3.28
+  end
+
+  def self.to_yards(meters)
+    meters * 1.09
+  end
+end
+
+# To access value of a constant in a module, use the `::` resolution operator.
+puts MeterConversion::VERSION
+
+# To call a method within a module, use module name, dot, method name
+# NOTE: Do NOT use `new` keyword on module, will be undefined
+puts MeterConversion.to_inches(5)
+puts MeterConversion.to_feet(5)
+puts MeterConversion.to_yards(5)
+
+# Outputs
+1.0
+196.85
+16.4
+5.45
+```
+
+### The Include Statement
