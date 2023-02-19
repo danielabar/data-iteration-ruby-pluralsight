@@ -19,6 +19,8 @@
   - [Adding Functionality with Mixins](#adding-functionality-with-mixins)
     - [Modules and Mixins](#modules-and-mixins)
     - [The Include Statement](#the-include-statement)
+    - [The Enumerable Mixin](#the-enumerable-mixin)
+    - [Overriding Methods](#overriding-methods)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -812,3 +814,213 @@ puts MeterConversion.to_yards(5)
 ```
 
 ### The Include Statement
+
+After writing a module, will want to use it in a class, this is what `include` keyword is for:
+
+- supports mixin behavior in class - class gets access to all methods and constants defined in the mixin
+- mixin modules behave as superclasses, can get a kind of multiple inheritance by including multiple modules in a single class
+- `include` statement makes a reference to the named module. If module is in a separate file, must first use `require` keyword to load it, before using `include` statement.
+
+Example:
+
+```ruby
+module Printable
+  # module defines a single behaviour `print`
+  def print(item)
+    "#{item} has been successfully printed."
+  end
+end
+
+class Terminal
+  # mixin Printable module
+  include Printable
+  attr_reader :name
+
+  def initialize(name)
+    @name = name
+  end
+end
+
+terminal = Terminal.new("Term")
+# invoke method from module
+p terminal.print("Page")
+```
+
+Suppose we want to do something every time a module is included?
+
+Example 2: Similar to previous example but this time added a class method `included` in the `Printable` module.
+
+```ruby
+module Printable
+  def self.included(klass)
+    # Define `print_count` attribute on the class this module is being included in
+    puts "Printable module has been included in class: #{klass}"
+    attr_accessor :print_count
+  end
+
+  def print(item)
+    # Double pipe followed by equal is: Conditional Assignment Operator
+    # If `print_count` has not previously been accessed, value will be set to 0,
+    # otherwise, value remains whatever it was.
+    @print_count ||= 0
+
+    # Increment print_count
+    @print_count += 1
+
+    # Also show the `print_count` attribute in this message
+    "#{item} has been successfully printed. Print Count: #{@print_count}"
+  end
+end
+
+class Terminal
+  include Printable
+  attr_reader :name
+
+  def initialize(name)
+    @name = name
+  end
+end
+
+terminal1 = Terminal.new("Term")
+p terminal1.print("Page")
+p terminal1.print("Picture")
+
+terminal2 = Terminal.new("Term")
+p terminal2.print("Page")
+p terminal2.print("Picture")
+```
+
+```
+Printable module has been included in class: Terminal
+"Page has been successfully printed. Print Count: 1"
+"Picture has been successfully printed. Print Count: 2"
+"Page has been successfully printed. Print Count: 1"
+"Picture has been successfully printed. Print Count: 2"
+```
+
+Outputs - note that the `Printable module has been included...` only runs once even though there are two instances of Terminal class created, explanation from ChatGPT:
+
+The `included` method in the `Printable` module runs only once because it is a class method that gets executed when the module is included in a class, not when instances of the class are instantiated. When you include the `Printable` module in the `Terminal` class by calling `include Printable`, the `included` method is executed once, and it adds an instance variable `@print_count` to the `Terminal` class.
+
+When you then create two instances of the Terminal class (terminal1 and terminal2), the initialize method of the Terminal class gets executed separately for each instance, but the included method does not get executed again, since it has already been executed when the Printable module was included in the Terminal class.
+
+This means that both terminal1 and terminal2 have access to the same instance variable @print_count that was added to the Terminal class by the included method. When you call terminal1.print("Page"), for example, it increments the @print_count variable in the Terminal class, and when you call terminal2.print("Page"), it increments the same @print_count variable.
+
+### The Enumerable Mixin
+
+Most widely used mixin in Ruby. Already included in all collection classes (Array, Hash, Set, etc.)
+
+* adds behaviour such as traverse, search, sort, etc. to collection classes
+* can also mixin to your own class, in this case, must provide `each` method to return elements of your collection in turn
+* if you want sorting capability for your class, must also implement the "spaceship" operator `<=>`
+
+ASIDE: Spaceship operator explanation from ChatGPT:
+
+The "spaceship" operator is a comparison operator in Ruby that returns -1, 0, or 1, depending on whether the left operand is less than, equal to, or greater than the right operand, respectively. The operator is represented by three consecutive characters "<=>", and is sometimes called the "three-way comparison operator". Example:
+
+```ruby
+a = 10
+b = 5
+
+result = a <=> b
+
+puts result # prints "1", because 10 is greater than 5
+```
+
+The spaceship operator is often used in sorting algorithms, where it can be used to compare two elements and determine their relative position in a sorted list. The operator can also be useful for comparing non-numeric values, such as strings or objects, as long as they implement the <=> method to define their comparison behavior.
+
+Example - we'd like to know how many people in a household are below a certain age:
+
+```ruby
+class Person
+  # include `Comparable` mixin so we can order all the persons by age
+  include Comparable
+  attr_accessor :name, :age
+
+  def initialize(name, age)
+    @name = name
+    @age = age
+  end
+
+  # tell Ruby how one person object can be compared with another
+  def <=>(other)
+    age <=> other.age
+  end
+
+  # provide a meaningful representation of the person object whenever its printed to console
+  def to_s
+    "Name: #{name} and age: #{age}"
+  end
+end
+
+# this class consists of all the persons in a household
+class Household
+  include Enumerable
+  attr_accessor :people
+
+  def initialize
+    @people = []
+  end
+
+  def add(person)
+    people.push(person)
+  end
+
+  # original code was with `&block` but Rubocop flagged Naming/BlockForwarding: Use anonymous block forwarding
+  # def each(&block)
+  #   people.each(&block)
+  # end
+
+  # `each` method acepts a block as a parameter, we pass this block to `each` method of people array
+  def each(&)
+    people.each(&)
+  end
+end
+
+# Populate people
+john = Person.new("John", 20)
+mark = Person.new("Mark", 35)
+tim = Person.new("Tim", 10)
+jimmy = Person.new("Jimmy", 45)
+
+# Populate households
+household1 = Household.new
+household1.add(john)
+household1.add(mark)
+
+household2 = Household.new
+household2.add(tim)
+household2.add(jimmy)
+
+# Display info - note the display comes from custom implementation of `to_s` method on Person class
+puts "Household 1 members:\n"
+puts household1.people
+puts "\n"
+# Name: John and age: 20
+# Name: Mark and age: 35
+
+puts "Household 2 members:\n"
+puts household2.people
+puts "\n"
+# Name: Tim and age: 10
+# Name: Jimmy and age: 45
+
+# Now we can use method from Enumerable such as `any?`
+puts "Are there any Household 2 members with age > 40\n"
+puts(household2.any? { |person| person.age > 40 })
+# true
+
+puts "Are there any Household 1 members with age > 50?\n"
+puts(household1.any? { |person| person.age > 50 })
+# false
+
+# Use Enumerable method `find_all` on household
+puts "Who are the Houseold 2 members with age < 20?\n"
+age_below20 = (household2.find_all { |person| person.age < 20 })
+puts age_below20
+# Name: Tim and age: 10
+```
+
+Just barely scratched the surface of what `Enumerable` can do, see the Ruby [docs](https://rubyapi.org/3.1/o/enumerable) for more details.
+
+### Overriding Methods
