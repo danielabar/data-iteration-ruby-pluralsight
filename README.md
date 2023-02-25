@@ -766,6 +766,10 @@ p [10, 25, 30].map(&to_inches)
 * Modules can be included in classes (aka mixin) to add behaviour, eg: `Enumerable`
 * Module is the superclass of `Class`, therefore every class is also a module.
 
+**Naming Convention**
+
+Common to name modules something ending in "able", eg: `Comparable`, `Enumerable`. Because modules are typically used to add behaviour.
+
 ```ruby
 p Class.superclass
 # Module
@@ -1024,3 +1028,140 @@ puts age_below20
 Just barely scratched the surface of what `Enumerable` can do, see the Ruby [docs](https://rubyapi.org/3.1/o/enumerable) for more details.
 
 ### Overriding Methods
+
+Might want to use some methods from a mixed in module as-is, and for other methods, provide your own implementation in a class.
+
+What happens if there are multiple methods with the same name, spread across modules, classes, and sub-classes. How does Ruby determine which of these should be called?
+
+**Method Lookup Path**
+
+* Specifies order in which modules are included
+* Last module included is evaluated first
+* Error if method not found in the class, module, or superclass
+
+Example - define a `Printable` module that adds the ability to print to console. Then inject it in a class `Terminal`, which will give the Terminal class the ability to `print` from the `Printable` module:
+
+```ruby
+module Printable
+  def print(item)
+    "#{item} has been successfully printed."
+  end
+end
+
+class Terminal
+  include Printable
+end
+
+terminal = Terminal.new
+p terminal.print("screen")
+# "screen has been successfully printed."
+```
+
+Now we want `Terminal` class to provide its own implementation of `print` method, aka override:
+
+```ruby
+module Printable
+  def print(item)
+    "#{item} has been successfully printed."
+  end
+end
+
+class Terminal
+  include Printable
+
+  # override `print` method from `Printable` module
+  def print(item)
+    "#{item} has been successfully printed to the console."
+  end
+end
+
+terminal = Terminal.new
+p terminal.print("screen")
+# "screen has been successfully printed to the console."
+```
+
+A more complex example with another class `Printer` that also includes the `Printable` module and provides its own implementation of the `print` method. We also introduce `InkjetPrinter` as a subclass of `Printer`, which also provides its own implementation of the `print` method.
+
+```ruby
+module Printable
+  def print(item)
+    "#{item} has been successfully printed."
+  end
+end
+
+class Terminal
+  include Printable
+
+  # override `print` method from `Printable` module
+  def print(item)
+    "#{item} has been successfully printed to the console."
+  end
+end
+
+class Printer
+  include Printable
+
+  # override `print` method from `Printable` module
+  def print(item)
+    "#{item} has been successfully printed to the printer."
+  end
+end
+
+class InkjetPrinter < Printer
+  # override `print` method from superclass or from module???
+  def print(item)
+    "#{item} has been successfully printed to the inkjet printer."
+  end
+end
+
+inkjet = InkjetPrinter.new
+
+# `ancestors` method returns a list of modules included/prepended in mod (including mod itself).
+p InkjetPrinter.ancestors
+# [InkjetPrinter, Printer, Printable, Object, Kernel, BasicObject]
+
+p inkjet.print("Page")
+# "Page has been successfully printed to the inkjet printer."
+```
+
+Notice the output of the `ancestors` method in the `InkjetPrinter` class. This is the order in which Ruby looks for the `print` method, as soon as one is found, it stops the lookup.
+
+If remove the `print` method from `InkjetPrinter` class, then `print` implementation from superclass Printer will be used:
+
+```ruby
+module Printable
+  def print(item)
+    "#{item} has been successfully printed."
+  end
+end
+
+class Terminal
+  include Printable
+
+  # override `print` method from `Printable` module
+  def print(item)
+    "#{item} has been successfully printed to the console."
+  end
+end
+
+class Printer
+  include Printable
+
+  # override `print` method from `Printable` module
+  def print(item)
+    "#{item} has been successfully printed to the printer."
+  end
+end
+
+class InkjetPrinter < Printer
+end
+
+inkjet = InkjetPrinter.new
+
+# `ancestors` method returns a list of modules included/prepended in mod (including mod itself).
+p InkjetPrinter.ancestors
+# [InkjetPrinter, Printer, Printable, Object, Kernel, BasicObject]
+
+p inkjet.print("Page")
+# "Page has been successfully printed to the printer."
+```
